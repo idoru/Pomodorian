@@ -43,11 +43,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 hostingView.bottomAnchor.constraint(equalTo: button.bottomAnchor),
                 hostingView.leftAnchor.constraint(equalTo: button.leftAnchor)
             ])
+            
+            // Listen for status bar refresh notifications
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("RefreshStatusBar"), 
+                                                  object: nil, 
+                                                  queue: .main) { [weak self] _ in
+                self?.statusItem?.button?.needsLayout = true
+                self?.statusItem?.button?.needsDisplay = true
+            }
         }
         
         // Start a timer to update the status bar
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             if let button = self?.statusItem?.button {
+                // Force update the size to accommodate changing text
+                if let statusItem = self?.statusItem {
+                    statusItem.button?.setFrameSize(NSSize(width: statusItem.button?.bounds.width ?? 0, height: 22))
+                }
                 button.needsDisplay = true
             }
         }

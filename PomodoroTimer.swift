@@ -5,6 +5,7 @@ class PomodoroTimer: ObservableObject {
     @Published var progress: Double = 0.0
     @Published var isRunning: Bool = false
     @Published var timeRemaining: TimeInterval = 25 * 60 // 25 minutes in seconds
+    @Published var lastUpdate: Date = Date() // To force UI updates
     
     private var totalTime: TimeInterval = 25 * 60 // 25 minutes in seconds
     private var timer: Timer?
@@ -12,6 +13,7 @@ class PomodoroTimer: ObservableObject {
     func start() {
         if !isRunning {
             isRunning = true
+            lastUpdate = Date()
             
             timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
@@ -19,6 +21,7 @@ class PomodoroTimer: ObservableObject {
                 if self.timeRemaining > 0 {
                     self.timeRemaining -= 1.0
                     self.progress = 1.0 - (self.timeRemaining / self.totalTime)
+                    self.lastUpdate = Date() // Force update the UI
                 } else {
                     self.complete()
                 }
@@ -61,9 +64,24 @@ class PomodoroTimer: ObservableObject {
 
 class AppState: ObservableObject {
     @Published var pomodoroTimer = PomodoroTimer()
-    @Published var showMinutes: Bool = true
-    @Published var showSeconds: Bool = true
-    @Published var usePieChart: Bool = false
+    @Published var showMinutes: Bool = true {
+        didSet {
+            // Force UI update when toggling display options
+            NotificationCenter.default.post(name: NSNotification.Name("RefreshStatusBar"), object: nil)
+        }
+    }
+    @Published var showSeconds: Bool = true {
+        didSet {
+            // Force UI update when toggling display options
+            NotificationCenter.default.post(name: NSNotification.Name("RefreshStatusBar"), object: nil)
+        }
+    }
+    @Published var usePieChart: Bool = false {
+        didSet {
+            // Force UI update when toggling display options
+            NotificationCenter.default.post(name: NSNotification.Name("RefreshStatusBar"), object: nil)
+        }
+    }
     @Published var emptyColor: Color = Color.pink.opacity(0.3)
     @Published var fullColor: Color = Color.red
     @Published var customTimerMinutes: Int = 25

@@ -5,7 +5,7 @@ struct StatusBarView: View {
     @EnvironmentObject var appState: AppState
     
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             if appState.usePieChart {
                 PieProgressView(progress: appState.pomodoroTimer.progress)
                     .frame(width: 16, height: 16)
@@ -17,6 +17,8 @@ struct StatusBarView: View {
             if appState.showMinutes || appState.showSeconds {
                 Text(timeString())
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .fixedSize()
+                    .frame(minWidth: 40, alignment: .leading)
             }
         }
         .frame(height: 22)
