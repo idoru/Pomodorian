@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 
 # Configuration
-APP_NAME="PomodoroMenuBar"
+APP_NAME="Pomodorian"
 BUNDLE_NAME="${APP_NAME}.app"
 OUTPUT_DIR="build"
 CONTENTS_DIR="${OUTPUT_DIR}/${BUNDLE_NAME}/Contents"
@@ -54,11 +54,11 @@ cat > "${CONTENTS_DIR}/Info.plist" << EOL
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.example.pomodoromenubar</string>
+    <string>com.example.pomodorian</string>
     <key>CFBundleName</key>
-    <string>PomodoroMenuBar</string>
+    <string>Pomodorian</string>
     <key>CFBundleExecutable</key>
-    <string>PomodoroMenuBar</string>
+    <string>Pomodorian</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundlePackageType</key>
@@ -79,6 +79,13 @@ EOL
 
 # Compile macOS app
 echo "Building ${APP_NAME} for macOS..."
+
+# Clean up any existing build if present
+rm -rf "${OUTPUT_DIR}/${BUNDLE_NAME}"
+
+# Recreate directories after cleanup
+mkdir -p "${MACOS_DIR}"
+mkdir -p "${RESOURCES_DIR}"
 swiftc -o "${MACOS_DIR}/${APP_NAME}" \
     -sdk $(xcrun --show-sdk-path --sdk macosx) \
     -target x86_64-apple-macosx11.0 \
