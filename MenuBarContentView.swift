@@ -120,7 +120,16 @@ struct MenuBarContentView: View {
             HStack {
                 Spacer()
                 Button("Quit") {
-                    NSApplication.shared.terminate(nil)
+                    let alert = NSAlert()
+                    alert.messageText = "Quit Pomodorian?"
+                    alert.informativeText = "Are you sure you want to quit the application?"
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "Quit")
+                    alert.addButton(withTitle: "Cancel")
+                    
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        NSApplication.shared.terminate(nil)
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
