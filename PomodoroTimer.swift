@@ -15,6 +15,15 @@ class PomodoroTimer: ObservableObject {
     func start() {
         if isRunning { return }
         
+        // Get updated duration settings from AppState when starting from reset state
+        if let appState = (NSApplication.shared.delegate as? AppDelegate)?.appState, 
+           pausedTimeRemaining == totalTime && timeRemaining == totalTime {
+            let newDuration = TimeInterval(appState.customTimerMinutes * 60 + appState.customTimerSeconds)
+            if newDuration != totalTime {
+                reset(withDuration: newDuration)
+            }
+        }
+        
         isRunning = true
         startTime = Date()
         
@@ -228,6 +237,8 @@ class AppState: ObservableObject {
         defaults.set(customTimerSeconds, forKey: kCustomTimerSeconds)
     }
     
+    // This function is kept for backward compatibility
+    // but the timer now automatically applies custom duration when started
     func resetTimerWithCustomDuration() {
         pomodoroTimer.reset(withDuration: TimeInterval(customTimerMinutes * 60 + customTimerSeconds))
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @available(macOS 11.0, *)
 struct TimerControlButton: View {
@@ -22,7 +23,7 @@ struct TimerControlButton: View {
         } label: {
             // Use the CURRENT state of the timer, not binding
             Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
-                .foregroundColor(timer.isRunning ? .red : .green)
+                .foregroundColor(.white)
         }
         .buttonStyle(.bordered)
         // Force view to redraw when our refresh state changes
@@ -33,8 +34,6 @@ struct TimerControlButton: View {
 @available(macOS 11.0, *)
 struct MenuBarContentView: View {
     @EnvironmentObject var appState: AppState
-    @State private var isTimerSettingsExpanded = false
-    @State private var isColorSettingsExpanded = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -48,7 +47,17 @@ struct MenuBarContentView: View {
                 TimerControlButton(timer: appState.pomodoroTimer)
                 
                 Button {
-                    appState.pomodoroTimer.reset()
+                    // Show a native macOS alert instead
+                    let alert = NSAlert()
+                    alert.messageText = "Reset Timer?"
+                    alert.informativeText = "Are you sure you want to reset the timer?"
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "Reset")
+                    alert.addButton(withTitle: "Cancel")
+                    
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        appState.pomodoroTimer.reset()
+                    }
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                 }
@@ -68,7 +77,11 @@ struct MenuBarContentView: View {
             Divider()
             
             // Timer Settings
-            DisclosureGroup("Timer Duration", isExpanded: $isTimerSettingsExpanded) {
+            Group {
+                Text("Timer Duration")
+                    .font(.headline)
+                    .padding(.top, 4)
+                
                 HStack {
                     Stepper(value: $appState.customTimerMinutes, in: 1...60) {
                         HStack {
@@ -88,19 +101,16 @@ struct MenuBarContentView: View {
                         }
                     }
                 }
-                
-                Button("Apply Duration") {
-                    appState.resetTimerWithCustomDuration()
-                }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 4)
             }
             
             Divider()
             
             // Color Settings
-            DisclosureGroup("Color Settings", isExpanded: $isColorSettingsExpanded) {
+            Group {
+                Text("Color Settings")
+                    .font(.headline)
+                    .padding(.top, 4)
+                    
                 ColorPicker("Empty Color", selection: $appState.emptyColor)
                 ColorPicker("Full Color", selection: $appState.fullColor)
             }
