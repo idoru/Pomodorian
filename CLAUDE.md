@@ -50,6 +50,27 @@ These UX features must be maintained for consistency:
 - Bar gauge must fill from bottom to top (not top to bottom)
 - Pie chart must start empty and fill clockwise from the 12 o'clock position
 
+### Core Graphics Notes
+
+When working with the pie chart implementation, be aware of these important details:
+
+1. Coordinate System: In CALayer/Core Graphics:
+   - Origin (0,0) is at the top-left corner
+   - Y-axis increases downward
+   - X-axis increases to the right
+
+2. Angle System for arcs:
+   - 0 radians points to 3 o'clock
+   - π/2 radians points to 12 o'clock
+   - π radians points to 9 o'clock
+   - 3π/2 radians points to 6 o'clock
+
+3. To create a pie chart that fills clockwise starting from 12 o'clock:
+   - Start angle must be π/2 (12 o'clock position)
+   - End angle must decrease as progress increases (startAngle - progress*2π)
+   - Use clockwise=true for the arc drawing
+   - Initial line must go from center to (center.x, 0) which is the top edge
+
 ### UI Refresh Mechanism
 
 Multiple UI refresh mechanisms ensure smooth updates:

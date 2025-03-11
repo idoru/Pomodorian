@@ -190,30 +190,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             bgLayer.fillColor = NSColor(appState.emptyColor).cgColor
             chartView.layer?.addSublayer(bgLayer)
             
-            // Progress pie segment - starts empty and fills up
-            // UX FEATURE: The pie must always start empty and fill clockwise from the 12 o'clock position
+            // Draw progress only if there's progress to show
             if appState.pomodoroTimer.progress > 0 {
+                // Create the progress layer
                 let progressLayer = CAShapeLayer()
                 
-                // Calculate the sweep angle for the filled portion
-                // For a pie that fills clockwise from 12 o'clock as progress increases
-                let startAngle: CGFloat = -.pi/2  // 12 o'clock position
-                let endAngle: CGFloat = startAngle + (2 * .pi * appState.pomodoroTimer.progress)
+                // IMPORTANT: This angle calculation is critical for correct pie chart behavior
+                // In Core Graphics coordinate system:
+                // 0 radians = 3 o'clock
+                // π/2 radians = 12 o'clock (top)
+                // π radians = 9 o'clock
+                // 3π/2 radians = 6 o'clock (bottom)
                 
+                // UX REQUIREMENT: Pie chart must start at 12 o'clock and fill clockwise
+                // Start at 12 o'clock (π/2)
+                let startAngle: CGFloat = CGFloat.pi/2
+                
+                // End angle for clockwise filling (MUST SUBTRACT progress to move clockwise)
+                let endAngle: CGFloat = startAngle - (2 * CGFloat.pi * CGFloat(appState.pomodoroTimer.progress))
+                
+                // Create arc path
                 let path = CGMutablePath()
+                let center = CGPoint(x: pieSize.width/2, y: pieSize.height/2)
                 
-                // Start at center
-                path.move(to: CGPoint(x: pieSize.width/2, y: pieSize.height/2))
+                // Move to center
+                path.move(to: center)
+                
                 // Line to 12 o'clock position
-                path.addLine(to: CGPoint(x: pieSize.width/2, y: 0))
-                // Arc clockwise - critical for correct filling direction
-                path.addArc(center: CGPoint(x: pieSize.width/2, y: pieSize.height/2), 
-                           radius: pieSize.width/2, 
-                           startAngle: startAngle,  
-                           endAngle: endAngle,  
-                           clockwise: false)  // false = clockwise in Core Graphics coordinate system
+                path.addLine(to: CGPoint(x: center.x, y: 0))
+                
+                // Add arc (clockwise=true in this coordinate system means clockwise visually)
+                path.addArc(center: center,
+                           radius: pieSize.width/2,
+                           startAngle: startAngle,
+                           endAngle: endAngle,
+                           clockwise: true) // true = visually CLOCKWISE with this coordinate system
+                
+                // Close the path
                 path.closeSubpath()
                 
+                // Apply to layer
                 progressLayer.path = path
                 progressLayer.fillColor = NSColor(appState.fullColor).cgColor
                 chartView.layer?.addSublayer(progressLayer)
