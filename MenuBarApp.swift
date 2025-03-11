@@ -84,139 +84,201 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func updateStatusBarButton() {
         guard let button = statusItem?.button else { return }
         
-        // Remove all subviews first
+        // Clear existing subviews
         button.subviews.forEach { $0.removeFromSuperview() }
         
-        // Create our custom view to display in the status bar
-        let customView = NSView()
-        button.addSubview(customView)
-        customView.translatesAutoresizingMaskIntoConstraints = false
+        // Set appropriate length for status item
+        if !(appState.showMinutes || appState.showSeconds) {
+            statusItem?.length = 22 // Just the icon
+        } else {
+            statusItem?.length = 60 // Icon + text
+        }
         
+        // Create a clean, simple layout with NSBox as a container
+        // NSBox lets us set a fixed height which will help maintain proper alignment
+        let container = NSBox()
+        container.boxType = .custom
+        container.isTransparent = true
+        container.titlePosition = .noTitle
+        container.fillColor = NSColor.clear
+        container.contentViewMargins = .zero
+        
+        // Fixed 22px height for menu bar
+        container.frame = NSRect(x: 0, y: 0, width: statusItem!.length, height: 22)
+        
+        button.addSubview(container)
+        container.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Pin container to button
         NSLayoutConstraint.activate([
-            customView.topAnchor.constraint(equalTo: button.topAnchor),
-            customView.bottomAnchor.constraint(equalTo: button.bottomAnchor),
-            customView.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 4),
-            customView.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -4)
+            container.topAnchor.constraint(equalTo: button.topAnchor),
+            container.bottomAnchor.constraint(equalTo: button.bottomAnchor),
+            container.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: button.trailingAnchor)
         ])
         
-        // Create horizontal stack
+        // Create a fixed-size, pre-positioned content view
+        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: statusItem!.length, height: 22))
+        container.contentView = contentView
+        
+        // --- HORIZONTAL STACK ---
         let stackView = NSStackView()
         stackView.orientation = .horizontal
-        stackView.spacing = 4
-        customView.addSubview(stackView)
+        
+        // Fixed spacing
+        if appState.showMinutes && appState.showSeconds {
+            stackView.spacing = 4  // Standard spacing when both shown
+        } else if appState.showMinutes || appState.showSeconds {
+            stackView.spacing = 2  // Reduced spacing with one field
+        } else {
+            stackView.spacing = 0  // No spacing when only showing chart
+        }
+        
+        contentView.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         
+        // These constraints are critical - they keep everything centered
         NSLayoutConstraint.activate([
-            stackView.centerYAnchor.constraint(equalTo: customView.centerYAnchor),
-            stackView.leadingAnchor.constraint(equalTo: customView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: customView.trailingAnchor)
+            stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            stackView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 2),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -2)
         ])
         
-        // Add progress indicator (bar or pie)
+        // Horizontal positioning depends on content
+        if !(appState.showMinutes || appState.showSeconds) {
+            // Center when only showing chart
+            NSLayoutConstraint.activate([
+                stackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor)
+            ])
+        } else {
+            // Left-align when showing text
+            NSLayoutConstraint.activate([
+                stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+                stackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -2)
+            ])
+        }
+        
+        // --- CHART VIEW (PIE OR BAR) ---
+        let chartView = NSView()
+        chartView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Fix chart size - important for proper positioning
         if appState.usePieChart {
-            // Pie chart indicator
+            NSLayoutConstraint.activate([
+                chartView.widthAnchor.constraint(equalToConstant: 16),
+                chartView.heightAnchor.constraint(equalToConstant: 16)
+            ])
+        } else {
+            NSLayoutConstraint.activate([
+                chartView.widthAnchor.constraint(equalToConstant: 8),
+                chartView.heightAnchor.constraint(equalToConstant: 16)
+            ])
+        }
+        
+        // Draw the chart using layers - draw at the proper coordinate origin
+        chartView.wantsLayer = true
+        chartView.layer = CALayer()
+        
+        if appState.usePieChart {
+            // PIE CHART
             let pieSize = NSSize(width: 16, height: 16)
-            let pieView = NSView(frame: NSRect(origin: .zero, size: pieSize))
             
-            // Create circular background
+            // Background circle - centered in view
             let bgLayer = CAShapeLayer()
-            let bgPath = CGPath(ellipseIn: CGRect(origin: .zero, size: pieSize), transform: nil)
-            bgLayer.path = bgPath
+            let circleRect = CGRect(x: 0, y: 0, width: pieSize.width, height: pieSize.height)
+            bgLayer.path = CGPath(ellipseIn: circleRect, transform: nil)
+            bgLayer.fillColor = NSColor(appState.emptyColor).cgColor
+            chartView.layer?.addSublayer(bgLayer)
             
-            // Convert SwiftUI color to NSColor
-            let emptyNSColor = NSColor(appState.emptyColor)
-            bgLayer.fillColor = emptyNSColor.cgColor
-            pieView.layer = CALayer()
-            pieView.layer?.addSublayer(bgLayer)
-            
-            // Create progress indicator
+            // Progress pie segment
             if appState.pomodoroTimer.progress > 0 {
                 let progressLayer = CAShapeLayer()
                 let angle = 2 * .pi * appState.pomodoroTimer.progress
                 let path = CGMutablePath()
                 
-                // Start at center and move to top center
                 path.move(to: CGPoint(x: pieSize.width/2, y: pieSize.height/2))
                 path.addLine(to: CGPoint(x: pieSize.width/2, y: 0))
-                
-                // Add the arc - now clockwise from 12 o'clock (-.pi/2)
                 path.addArc(center: CGPoint(x: pieSize.width/2, y: pieSize.height/2), 
                            radius: pieSize.width/2, 
                            startAngle: -.pi/2, 
                            endAngle: angle - .pi/2, 
                            clockwise: true)
-                
-                // Close back to center
                 path.closeSubpath()
                 
                 progressLayer.path = path
-                // Convert SwiftUI color to NSColor
-                let fullNSColor = NSColor(appState.fullColor)
-                progressLayer.fillColor = fullNSColor.cgColor
-                pieView.layer?.addSublayer(progressLayer)
+                progressLayer.fillColor = NSColor(appState.fullColor).cgColor
+                chartView.layer?.addSublayer(progressLayer)
             }
-            
-            stackView.addArrangedSubview(pieView)
         } else {
-            // Bar indicator 
+            // BAR CHART
             let barSize = NSSize(width: 8, height: 16)
-            let barView = NSView(frame: NSRect(origin: .zero, size: barSize))
             
-            // Create background
+            // Background bar
             let bgLayer = CAShapeLayer()
-            let bgRect = CGRect(origin: .zero, size: barSize)
-            bgLayer.path = CGPath(roundedRect: bgRect, cornerWidth: 2, cornerHeight: 2, transform: nil)
+            let barRect = CGRect(x: 0, y: 0, width: barSize.width, height: barSize.height)
+            bgLayer.path = CGPath(roundedRect: barRect, cornerWidth: 2, cornerHeight: 2, transform: nil)
+            bgLayer.fillColor = NSColor(appState.emptyColor).cgColor
+            chartView.layer?.addSublayer(bgLayer)
             
-            // Convert SwiftUI color to NSColor
-            let emptyNSColor = NSColor(appState.emptyColor)
-            bgLayer.fillColor = emptyNSColor.cgColor
-            barView.layer = CALayer()
-            barView.layer?.addSublayer(bgLayer)
-            
-            // Create progress indicator
+            // Progress bar (starting from bottom)
             if appState.pomodoroTimer.progress > 0 {
                 let progressHeight = max(1, barSize.height * appState.pomodoroTimer.progress)
-                // Start from bottom (y: 0) to fill upward
-                let progressRect = CGRect(x: 0, y: 0, 
-                                         width: barSize.width, height: progressHeight)
+                
+                // Position at bottom of bar, with proper y offset
+                let yOffset = barSize.height - progressHeight
+                let progressRect = CGRect(x: 0, y: yOffset, width: barSize.width, height: progressHeight)
                 
                 let progressLayer = CAShapeLayer()
-                progressLayer.path = CGPath(roundedRect: progressRect, cornerWidth: 2, cornerHeight: 2, transform: nil)
-                
-                // Convert SwiftUI color to NSColor
-                let fullNSColor = NSColor(appState.fullColor)
-                progressLayer.fillColor = fullNSColor.cgColor
-                barView.layer?.addSublayer(progressLayer)
+                progressLayer.path = CGPath(roundedRect: progressRect, 
+                                          cornerWidth: 2, cornerHeight: 2, transform: nil)
+                progressLayer.fillColor = NSColor(appState.fullColor).cgColor
+                chartView.layer?.addSublayer(progressLayer)
             }
-            
-            stackView.addArrangedSubview(barView)
         }
         
-        // Add time text if needed
+        // Add chart to stack
+        stackView.addArrangedSubview(chartView)
+        
+        // --- TEXT FIELD ---
         if appState.showMinutes || appState.showSeconds {
+            // Calculate time components
             let time = appState.pomodoroTimer.timeRemaining
             let minutes = Int(time) / 60
             let seconds = Int(time) % 60
+            let totalSeconds = Int(time)
             
+            // Format according to settings
             var timeString = ""
             if appState.showMinutes && appState.showSeconds {
                 timeString = String(format: "%02d:%02d", minutes, seconds)
             } else if appState.showMinutes {
                 timeString = String(format: "%dm", minutes)
             } else if appState.showSeconds {
-                // When only seconds are shown, display the total time in seconds
-                let totalSeconds = Int(time)
                 timeString = String(format: "%ds", totalSeconds)
             }
             
+            // Create text field
             let textField = NSTextField(labelWithString: timeString)
+            textField.translatesAutoresizingMaskIntoConstraints = false
             textField.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-            textField.alignment = .left
             textField.textColor = NSColor.labelColor
+            textField.isBezeled = false
+            textField.drawsBackground = false
+            textField.isEditable = false
+            textField.alignment = .left
             
+            // Add to stack
             stackView.addArrangedSubview(textField)
         }
     }
+    // This code is commented out since we don't need the layout tester in production
+    // Uncomment if needed for testing during development
+    /*
+    func showLayoutTester() {
+        // The tester would be used during development
+        // For production, we just apply the tested layout directly
+    }
+    */
     
     func showAlert(title: String, message: String) {
         let alert = NSAlert()

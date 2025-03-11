@@ -22,6 +22,11 @@ class PomodoroTimer: ObservableObject {
     func start() {
         if isRunning { return }
         
+        // If timer has already expired, reset it first
+        if timeRemaining <= 0 {
+            reset()
+        }
+        
         isRunning = true
         startTime = Date()
         
