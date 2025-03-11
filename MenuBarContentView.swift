@@ -1,6 +1,36 @@
 import SwiftUI
 
 @available(macOS 11.0, *)
+struct TimerControlButton: View {
+    // Keep a direct reference to the timer
+    @ObservedObject var timer: PomodoroTimer
+    
+    // Local state to track observed changes and force refresh
+    @State private var forceRefresh = false
+    
+    var body: some View {
+        Button {
+            // Toggle the timer state
+            if timer.isRunning {
+                timer.pause()
+            } else {
+                timer.start()
+            }
+            
+            // Also toggle our local state to force a refresh
+            forceRefresh.toggle()
+        } label: {
+            // Use the CURRENT state of the timer, not binding
+            Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
+                .foregroundColor(timer.isRunning ? .red : .green)
+        }
+        .buttonStyle(.bordered)
+        // Force view to redraw when our refresh state changes
+        .id("playButton-\(timer.isRunning)-\(forceRefresh)")
+    }
+}
+
+@available(macOS 11.0, *)
 struct MenuBarContentView: View {
     @EnvironmentObject var appState: AppState
     @State private var isTimerSettingsExpanded = false
@@ -14,20 +44,8 @@ struct MenuBarContentView: View {
                 
                 Spacer()
                 
-                // Play/Pause button
-                Button {
-                    if appState.pomodoroTimer.isRunning {
-                        appState.pomodoroTimer.pause()
-                    } else {
-                        appState.pomodoroTimer.start()
-                    }
-                } label: {
-                    Image(systemName: appState.pomodoroTimer.isRunning ? "pause.fill" : "play.fill")
-                        .foregroundColor(appState.pomodoroTimer.isRunning ? .red : .green)
-                }
-                .buttonStyle(.bordered)
-                // Force button to update with a unique ID each time
-                .id("playButton-\(appState.pomodoroTimer.isRunning)")
+                // Play/Pause button with custom refreshing state
+                TimerControlButton(timer: appState.pomodoroTimer)
                 
                 Button {
                     appState.pomodoroTimer.reset()
@@ -100,5 +118,9 @@ struct MenuBarContentView: View {
         }
         .padding()
         .frame(width: 300)
+        // Add refresh listener to ensure we get timer state changes
+        .onReceive(NotificationCenter.default.publisher(for: .timerStateChanged)) { _ in
+            // This will be called when the timer state changes
+        }
     }
 }

@@ -48,10 +48,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             forName: .timerStateChanged,
             object: nil,
             queue: .main) { [weak self] _ in
-                // Force popover to update
-                if let popoverVC = self?.popover?.contentViewController as? NSHostingController<MenuBarContentView> {
-                    popoverVC.view.needsDisplay = true
-                    popoverVC.view.setNeedsDisplay(popoverVC.view.bounds)
+                // Completely recreate the popover view controller to force a full refresh
+                if let self = self, let popover = self.popover {
+                    // Create a fresh SwiftUI view
+                    let refreshedView = MenuBarContentView()
+                        .environmentObject(self.appState)
+                    
+                    // Replace the content view controller
+                    popover.contentViewController = NSHostingController(rootView: refreshedView)
                 }
             }
             
