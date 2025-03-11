@@ -203,7 +203,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else if appState.showMinutes {
                 timeString = String(format: "%dm", minutes)
             } else if appState.showSeconds {
-                timeString = String(format: "%ds", seconds)
+                // When only seconds are shown, display the total time in seconds
+                let totalSeconds = Int(time)
+                timeString = String(format: "%ds", totalSeconds)
             }
             
             let textField = NSTextField(labelWithString: timeString)

@@ -30,13 +30,15 @@ struct StatusBarView: View {
         let time = appState.pomodoroTimer.timeRemaining
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
+        let totalSeconds = Int(time)
         
         if appState.showMinutes && appState.showSeconds {
             return String(format: "%02d:%02d", minutes, seconds)
         } else if appState.showMinutes {
             return String(format: "%dm", minutes)
         } else if appState.showSeconds {
-            return String(format: "%ds", seconds)
+            // When only seconds are shown, display the total time in seconds
+            return String(format: "%ds", totalSeconds)
         } else {
             return ""
         }
