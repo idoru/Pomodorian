@@ -4,25 +4,23 @@ import SwiftUI
 class PomodoroTimer: ObservableObject {
     @Published var progress: Double = 0.0
     @Published var isRunning: Bool = false
-    @Published var timeRemaining: TimeInterval = 25 * 60 // 25 minutes in seconds
+    @Published var timeRemaining: TimeInterval
     
-    private var totalTime: TimeInterval = 25 * 60 // 25 minutes in seconds
+    private var totalTime: TimeInterval
     private var startTime: Date?
-    private var pausedTimeRemaining: TimeInterval = 25 * 60
+    private var pausedTimeRemaining: TimeInterval
+    
+    init(duration: TimeInterval = 25 * 60) {
+        self.totalTime = duration
+        self.timeRemaining = duration
+        self.pausedTimeRemaining = duration
+    }
+    
     private var timer: Timer?
     
     // Start the timer with direct mechanism
     func start() {
         if isRunning { return }
-        
-        // Get updated duration settings from AppState when starting from reset state
-        if let appState = (NSApplication.shared.delegate as? AppDelegate)?.appState, 
-           pausedTimeRemaining == totalTime && timeRemaining == totalTime {
-            let newDuration = TimeInterval(appState.customTimerMinutes * 60 + appState.customTimerSeconds)
-            if newDuration != totalTime {
-                reset(withDuration: newDuration)
-            }
-        }
         
         isRunning = true
         startTime = Date()
@@ -79,7 +77,13 @@ class PomodoroTimer: ObservableObject {
     }
     
     func reset() {
-        reset(withDuration: totalTime)
+        // Check for updated duration settings from AppState
+        if let appState = (NSApplication.shared.delegate as? AppDelegate)?.appState {
+            let newDuration = TimeInterval(appState.customTimerMinutes * 60 + appState.customTimerSeconds)
+            reset(withDuration: newDuration)
+        } else {
+            reset(withDuration: totalTime)
+        }
     }
     
     func reset(withDuration duration: TimeInterval) {
@@ -111,7 +115,7 @@ class PomodoroTimer: ObservableObject {
 }
 
 class AppState: ObservableObject {
-    @Published var pomodoroTimer = PomodoroTimer()
+    @Published var pomodoroTimer: PomodoroTimer
     
     @Published var showMinutes: Bool {
         didSet {
@@ -179,6 +183,17 @@ class AppState: ObservableObject {
         // Load saved settings or use defaults
         let defaults = UserDefaults.standard
         
+        // Extract timer settings first
+        let minutes = defaults.object(forKey: kCustomTimerMinutes) as? Int ?? 25
+        let seconds = defaults.object(forKey: kCustomTimerSeconds) as? Int ?? 0
+        let initialDuration = TimeInterval(minutes * 60 + seconds)
+        
+        // Initialize the timer first
+        pomodoroTimer = PomodoroTimer(duration: initialDuration)
+        
+        // Now initialize the rest of properties
+        customTimerMinutes = minutes
+        customTimerSeconds = seconds
         showMinutes = defaults.object(forKey: kShowMinutes) as? Bool ?? true
         showSeconds = defaults.object(forKey: kShowSeconds) as? Bool ?? true
         usePieChart = defaults.object(forKey: kUsePieChart) as? Bool ?? false
@@ -201,9 +216,6 @@ class AppState: ObservableObject {
         } else {
             fullColor = Color.red
         }
-        
-        customTimerMinutes = defaults.object(forKey: kCustomTimerMinutes) as? Int ?? 25
-        customTimerSeconds = defaults.object(forKey: kCustomTimerSeconds) as? Int ?? 0
     }
     
     // Save all settings to UserDefaults
