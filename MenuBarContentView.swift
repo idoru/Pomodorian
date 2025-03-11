@@ -14,6 +14,7 @@ struct MenuBarContentView: View {
                 
                 Spacer()
                 
+                // Play/Pause button
                 Button {
                     if appState.pomodoroTimer.isRunning {
                         appState.pomodoroTimer.pause()
@@ -22,9 +23,11 @@ struct MenuBarContentView: View {
                     }
                 } label: {
                     Image(systemName: appState.pomodoroTimer.isRunning ? "pause.fill" : "play.fill")
+                        .foregroundColor(appState.pomodoroTimer.isRunning ? .red : .green)
                 }
                 .buttonStyle(.bordered)
-                .foregroundColor(appState.pomodoroTimer.isRunning ? .red : .green)
+                // Force button to update with a unique ID each time
+                .id("playButton-\(appState.pomodoroTimer.isRunning)")
                 
                 Button {
                     appState.pomodoroTimer.reset()

@@ -1,5 +1,7 @@
 import SwiftUI
 
+// Note: This view is no longer used directly in the status bar.
+// We are now using native AppKit controls for more reliable updates.
 @available(macOS 11.0, *)
 struct StatusBarView: View {
     @EnvironmentObject var appState: AppState
@@ -42,6 +44,9 @@ struct StatusBarView: View {
 }
 
 @available(macOS 11.0, *)
+// Note: These views are no longer used directly. 
+// We are now using native AppKit controls for more reliable updates.
+
 struct BarProgressView: View {
     @EnvironmentObject var appState: AppState
     var progress: Double
@@ -56,7 +61,7 @@ struct BarProgressView: View {
             // Progress bar
             RoundedRectangle(cornerRadius: 2)
                 .fill(appState.fullColor)
-                .frame(width: 8, height: 16 * progress)
+                .frame(width: 8, height: max(1, 16 * progress)) // Ensure at least 1 pixel high for visibility
         }
     }
 }
@@ -74,7 +79,7 @@ struct PieProgressView: View {
             
             // Progress pie
             Circle()
-                .trim(from: 0, to: CGFloat(progress))
+                .trim(from: 0, to: CGFloat(max(0.001, progress))) // Ensure visibility with minimum value
                 .rotation(.degrees(-90))
                 .fill(appState.fullColor)
         }
