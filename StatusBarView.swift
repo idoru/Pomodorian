@@ -54,7 +54,7 @@ struct BarProgressView: View {
     var progress: Double
     
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: .top) {  // Changed from .bottom to .top
             // Background
             RoundedRectangle(cornerRadius: 2)
                 .fill(appState.emptyColor)
@@ -79,10 +79,10 @@ struct PieProgressView: View {
             Circle()
                 .fill(appState.emptyColor)
             
-            // Progress pie
+            // Progress pie - starting at 12 o'clock and moving clockwise
             Circle()
                 .trim(from: 0, to: CGFloat(max(0.001, progress))) // Ensure visibility with minimum value
-                .rotation(.degrees(-90))
+                .rotation(.degrees(-90)) // -90 degrees starts at 12 o'clock
                 .fill(appState.fullColor)
         }
     }

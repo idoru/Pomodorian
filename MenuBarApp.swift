@@ -139,12 +139,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 path.move(to: CGPoint(x: pieSize.width/2, y: pieSize.height/2))
                 path.addLine(to: CGPoint(x: pieSize.width/2, y: 0))
                 
-                // Add the arc
+                // Add the arc - now clockwise from 12 o'clock (-.pi/2)
                 path.addArc(center: CGPoint(x: pieSize.width/2, y: pieSize.height/2), 
                            radius: pieSize.width/2, 
                            startAngle: -.pi/2, 
                            endAngle: angle - .pi/2, 
-                           clockwise: false)
+                           clockwise: true)
                 
                 // Close back to center
                 path.closeSubpath()
@@ -176,7 +176,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Create progress indicator
             if appState.pomodoroTimer.progress > 0 {
                 let progressHeight = max(1, barSize.height * appState.pomodoroTimer.progress)
-                let progressRect = CGRect(x: 0, y: barSize.height - progressHeight, 
+                // Start from bottom (y: 0) to fill upward
+                let progressRect = CGRect(x: 0, y: 0, 
                                          width: barSize.width, height: progressHeight)
                 
                 let progressLayer = CAShapeLayer()
