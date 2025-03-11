@@ -48,6 +48,7 @@ The status bar item uses direct CALayer manipulation rather than embedded SwiftU
 
 These UX features must be maintained for consistency:
 - Bar gauge must fill from bottom to top (not top to bottom)
+- Pie chart must start empty and fill clockwise from the 12 o'clock position
 
 ### UI Refresh Mechanism
 

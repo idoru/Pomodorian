@@ -190,19 +190,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             bgLayer.fillColor = NSColor(appState.emptyColor).cgColor
             chartView.layer?.addSublayer(bgLayer)
             
-            // Progress pie segment
+            // Progress pie segment - starts empty and fills up
+            // UX FEATURE: The pie must always start empty and fill clockwise from the 12 o'clock position
             if appState.pomodoroTimer.progress > 0 {
                 let progressLayer = CAShapeLayer()
-                let angle = 2 * .pi * appState.pomodoroTimer.progress
+                
+                // Calculate the sweep angle for the filled portion
+                // For a pie that fills clockwise from 12 o'clock as progress increases
+                let startAngle: CGFloat = -.pi/2  // 12 o'clock position
+                let endAngle: CGFloat = startAngle + (2 * .pi * appState.pomodoroTimer.progress)
+                
                 let path = CGMutablePath()
                 
+                // Start at center
                 path.move(to: CGPoint(x: pieSize.width/2, y: pieSize.height/2))
+                // Line to 12 o'clock position
                 path.addLine(to: CGPoint(x: pieSize.width/2, y: 0))
+                // Arc clockwise - critical for correct filling direction
                 path.addArc(center: CGPoint(x: pieSize.width/2, y: pieSize.height/2), 
                            radius: pieSize.width/2, 
-                           startAngle: -.pi/2, 
-                           endAngle: angle - .pi/2, 
-                           clockwise: true)
+                           startAngle: startAngle,  
+                           endAngle: endAngle,  
+                           clockwise: false)  // false = clockwise in Core Graphics coordinate system
                 path.closeSubpath()
                 
                 progressLayer.path = path
