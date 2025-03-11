@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ServiceManagement
 
 class PomodoroTimer: ObservableObject {
     @Published var progress: Double = 0.0
@@ -143,6 +144,13 @@ class AppState: ObservableObject {
         }
     }
     
+    @Published var startAtLogin: Bool {
+        didSet {
+            updateLoginItemStatus()
+            saveSettings()
+        }
+    }
+    
     @Published var emptyColor: Color {
         didSet {
             NotificationCenter.default.post(name: .colorSettingsChanged, object: nil)
@@ -173,6 +181,7 @@ class AppState: ObservableObject {
     private let kShowMinutes = "showMinutes"
     private let kShowSeconds = "showSeconds"
     private let kUsePieChart = "usePieChart"
+    private let kStartAtLogin = "startAtLogin"
     private let kEmptyColorRed = "emptyColorRed"
     private let kEmptyColorGreen = "emptyColorGreen"
     private let kEmptyColorBlue = "emptyColorBlue"
@@ -202,6 +211,7 @@ class AppState: ObservableObject {
         showMinutes = defaults.object(forKey: kShowMinutes) as? Bool ?? true
         showSeconds = defaults.object(forKey: kShowSeconds) as? Bool ?? true
         usePieChart = defaults.object(forKey: kUsePieChart) as? Bool ?? false
+        startAtLogin = defaults.object(forKey: kStartAtLogin) as? Bool ?? false
         
         // Load colors
         if let emptyRed = defaults.object(forKey: kEmptyColorRed) as? Double,
@@ -231,6 +241,7 @@ class AppState: ObservableObject {
         defaults.set(showMinutes, forKey: kShowMinutes)
         defaults.set(showSeconds, forKey: kShowSeconds)
         defaults.set(usePieChart, forKey: kUsePieChart)
+        defaults.set(startAtLogin, forKey: kStartAtLogin)
         
         // Save colors - first convert to RGB components
         let nsEmptyColor = NSColor(emptyColor)
@@ -258,5 +269,35 @@ class AppState: ObservableObject {
     // but the timer now automatically applies custom duration when started
     func resetTimerWithCustomDuration() {
         pomodoroTimer.reset(withDuration: TimeInterval(customTimerMinutes * 60 + customTimerSeconds))
+    }
+    
+    // Update login item status based on user preference
+    private func updateLoginItemStatus() {
+        if #available(macOS 13.0, *) {
+            // Use the newer SMAppService API for macOS 13+
+            let service = SMAppService.mainApp
+            
+            do {
+                if startAtLogin {
+                    if service.status == .notRegistered {
+                        try service.register()
+                    }
+                } else {
+                    if service.status == .enabled {
+                        try service.unregister()
+                    }
+                }
+            } catch {
+                print("Failed to \(startAtLogin ? "register" : "unregister") login item: \(error.localizedDescription)")
+            }
+        } else {
+            // Use the older SMLoginItemSetEnabled API for earlier macOS versions
+            let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.example.pomodorian"
+            let success = SMLoginItemSetEnabled(bundleIdentifier as CFString, startAtLogin)
+            
+            if !success {
+                print("Failed to \(startAtLogin ? "register" : "unregister") login item using legacy API")
+            }
+        }
     }
 }

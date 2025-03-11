@@ -72,6 +72,7 @@ struct MenuBarContentView: View {
                 Toggle("Show Minutes", isOn: $appState.showMinutes)
                 Toggle("Show Seconds", isOn: $appState.showSeconds)
                 Toggle("Use Pie Chart", isOn: $appState.usePieChart)
+                Toggle("Start at Login", isOn: $appState.startAtLogin)
             }
             
             Divider()
