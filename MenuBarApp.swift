@@ -1,6 +1,12 @@
 import Cocoa
 import SwiftUI
 
+// Notification names
+extension Notification.Name {
+    static let timerStateChanged = Notification.Name("timerStateChanged")
+    static let colorSettingsChanged = Notification.Name("colorSettingsChanged")
+}
+
 @available(macOS 11.0, *)
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
@@ -36,6 +42,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self else { return }
             self.updateStatusBarButton()
         }
+        
+        // Observe timer state changes to update the play/pause button
+        NotificationCenter.default.addObserver(
+            forName: .timerStateChanged,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                // Force popover to update
+                if let popoverVC = self?.popover?.contentViewController as? NSHostingController<MenuBarContentView> {
+                    popoverVC.view.needsDisplay = true
+                    popoverVC.view.setNeedsDisplay(popoverVC.view.bounds)
+                }
+            }
+            
+        // Observe color setting changes to update the status bar
+        NotificationCenter.default.addObserver(
+            forName: .colorSettingsChanged,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.updateStatusBarButton()
+            }
         
         // No notification permission needed
     }
@@ -92,7 +118,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let bgLayer = CAShapeLayer()
             let bgPath = CGPath(ellipseIn: CGRect(origin: .zero, size: pieSize), transform: nil)
             bgLayer.path = bgPath
-            bgLayer.fillColor = NSColor.systemPink.withAlphaComponent(0.3).cgColor
+            
+            // Convert SwiftUI color to NSColor
+            let emptyNSColor = NSColor(appState.emptyColor)
+            bgLayer.fillColor = emptyNSColor.cgColor
             pieView.layer = CALayer()
             pieView.layer?.addSublayer(bgLayer)
             
@@ -117,7 +146,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 path.closeSubpath()
                 
                 progressLayer.path = path
-                progressLayer.fillColor = NSColor.systemRed.cgColor
+                // Convert SwiftUI color to NSColor
+                let fullNSColor = NSColor(appState.fullColor)
+                progressLayer.fillColor = fullNSColor.cgColor
                 pieView.layer?.addSublayer(progressLayer)
             }
             
@@ -131,7 +162,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let bgLayer = CAShapeLayer()
             let bgRect = CGRect(origin: .zero, size: barSize)
             bgLayer.path = CGPath(roundedRect: bgRect, cornerWidth: 2, cornerHeight: 2, transform: nil)
-            bgLayer.fillColor = NSColor.systemPink.withAlphaComponent(0.3).cgColor
+            
+            // Convert SwiftUI color to NSColor
+            let emptyNSColor = NSColor(appState.emptyColor)
+            bgLayer.fillColor = emptyNSColor.cgColor
             barView.layer = CALayer()
             barView.layer?.addSublayer(bgLayer)
             
@@ -143,7 +177,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 
                 let progressLayer = CAShapeLayer()
                 progressLayer.path = CGPath(roundedRect: progressRect, cornerWidth: 2, cornerHeight: 2, transform: nil)
-                progressLayer.fillColor = NSColor.systemRed.cgColor
+                
+                // Convert SwiftUI color to NSColor
+                let fullNSColor = NSColor(appState.fullColor)
+                progressLayer.fillColor = fullNSColor.cgColor
                 barView.layer?.addSublayer(progressLayer)
             }
             

@@ -35,6 +35,9 @@ class PomodoroTimer: ObservableObject {
         // Initial update
         updateTimer()
         objectWillChange.send()
+        
+        // Post notification to update UI
+        NotificationCenter.default.post(name: .timerStateChanged, object: nil)
     }
     
     // Update timer state
@@ -61,6 +64,9 @@ class PomodoroTimer: ObservableObject {
         timer?.invalidate()
         timer = nil
         objectWillChange.send()
+        
+        // Post notification to update UI
+        NotificationCenter.default.post(name: .timerStateChanged, object: nil)
     }
     
     func reset() {
@@ -97,11 +103,37 @@ class PomodoroTimer: ObservableObject {
 
 class AppState: ObservableObject {
     @Published var pomodoroTimer = PomodoroTimer()
-    @Published var showMinutes: Bool = true
-    @Published var showSeconds: Bool = true
-    @Published var usePieChart: Bool = false
-    @Published var emptyColor: Color = Color.pink.opacity(0.3)
-    @Published var fullColor: Color = Color.red
+    
+    @Published var showMinutes: Bool = true {
+        didSet {
+            NotificationCenter.default.post(name: .timerStateChanged, object: nil)
+        }
+    }
+    
+    @Published var showSeconds: Bool = true {
+        didSet {
+            NotificationCenter.default.post(name: .timerStateChanged, object: nil)
+        }
+    }
+    
+    @Published var usePieChart: Bool = false {
+        didSet {
+            NotificationCenter.default.post(name: .timerStateChanged, object: nil)
+        }
+    }
+    
+    @Published var emptyColor: Color = Color.pink.opacity(0.3) {
+        didSet {
+            NotificationCenter.default.post(name: .colorSettingsChanged, object: nil)
+        }
+    }
+    
+    @Published var fullColor: Color = Color.red {
+        didSet {
+            NotificationCenter.default.post(name: .colorSettingsChanged, object: nil)
+        }
+    }
+    
     @Published var customTimerMinutes: Int = 25
     @Published var customTimerSeconds: Int = 0
     
