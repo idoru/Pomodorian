@@ -44,6 +44,11 @@ The status bar item uses direct CALayer manipulation rather than embedded SwiftU
 - Direct CALayer drawing gives more precise control over status bar appearance
 - CALayers provide better performance for the constantly updating timer
 
+### UX Requirements
+
+These UX features must be maintained for consistency:
+- Bar gauge must fill from bottom to top (not top to bottom)
+
 ### UI Refresh Mechanism
 
 Multiple UI refresh mechanisms ensure smooth updates:

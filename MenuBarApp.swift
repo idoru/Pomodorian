@@ -220,13 +220,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             bgLayer.fillColor = NSColor(appState.emptyColor).cgColor
             chartView.layer?.addSublayer(bgLayer)
             
-            // Progress bar (starting from bottom)
+            // Progress bar (filling up from the bottom)
+            // UX FEATURE: The bar must always fill from bottom to top
             if appState.pomodoroTimer.progress > 0 {
                 let progressHeight = max(1, barSize.height * appState.pomodoroTimer.progress)
                 
-                // Position at bottom of bar, with proper y offset
-                let yOffset = barSize.height - progressHeight
-                let progressRect = CGRect(x: 0, y: yOffset, width: barSize.width, height: progressHeight)
+                // Start from y=0 (bottom) and grow upward
+                let progressRect = CGRect(x: 0, y: 0, width: barSize.width, height: progressHeight)
                 
                 let progressLayer = CAShapeLayer()
                 progressLayer.path = CGPath(roundedRect: progressRect, 
