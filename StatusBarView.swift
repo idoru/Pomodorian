@@ -5,7 +5,7 @@ import SwiftUI
 @available(macOS 11.0, *)
 struct StatusBarView: View {
     @EnvironmentObject var appState: AppState
-    
+
     var body: some View {
         HStack(spacing: 4) {
             if appState.usePieChart {
@@ -15,7 +15,7 @@ struct StatusBarView: View {
                 BarProgressView(progress: appState.pomodoroTimer.progress)
                     .frame(width: 8, height: 16)
             }
-            
+
             if appState.showMinutes || appState.showSeconds {
                 Text(timeString())
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -25,13 +25,13 @@ struct StatusBarView: View {
         }
         .frame(height: 22)
     }
-    
+
     private func timeString() -> String {
         let time = appState.pomodoroTimer.timeRemaining
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         let totalSeconds = Int(time)
-        
+
         if appState.showMinutes && appState.showSeconds {
             return String(format: "%02d:%02d", minutes, seconds)
         } else if appState.showMinutes {
@@ -46,20 +46,20 @@ struct StatusBarView: View {
 }
 
 @available(macOS 11.0, *)
-// Note: These views are no longer used directly. 
+// Note: These views are no longer used directly.
 // We are now using native AppKit controls for more reliable updates.
 
 struct BarProgressView: View {
     @EnvironmentObject var appState: AppState
     var progress: Double
-    
+
     var body: some View {
         ZStack(alignment: .top) {  // Changed from .bottom to .top
             // Background
             RoundedRectangle(cornerRadius: 2)
                 .fill(appState.emptyColor)
                 .frame(width: 8, height: 16)
-            
+
             // Progress bar
             RoundedRectangle(cornerRadius: 2)
                 .fill(appState.fullColor)
@@ -72,13 +72,13 @@ struct BarProgressView: View {
 struct PieProgressView: View {
     @EnvironmentObject var appState: AppState
     var progress: Double
-    
+
     var body: some View {
         ZStack {
             // Background
             Circle()
                 .fill(appState.emptyColor)
-            
+
             // Progress pie - starting at 12 o'clock and moving clockwise
             Circle()
                 .trim(from: 0, to: CGFloat(max(0.001, progress))) // Ensure visibility with minimum value

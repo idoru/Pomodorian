@@ -5,10 +5,10 @@ import AppKit
 struct TimerControlButton: View {
     // Keep a direct reference to the timer
     @ObservedObject var timer: PomodoroTimer
-    
+
     // Local state to track observed changes and force refresh
     @State private var forceRefresh = false
-    
+
     var body: some View {
         Button {
             // Toggle the timer state
@@ -17,7 +17,7 @@ struct TimerControlButton: View {
             } else {
                 timer.start()
             }
-            
+
             // Also toggle our local state to force a refresh
             forceRefresh.toggle()
         } label: {
@@ -34,18 +34,18 @@ struct TimerControlButton: View {
 @available(macOS 11.0, *)
 struct MenuBarContentView: View {
     @EnvironmentObject var appState: AppState
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Pomodorian")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 // Play/Pause button with custom refreshing state
                 TimerControlButton(timer: appState.pomodoroTimer)
-                
+
                 Button {
                     // Show a native macOS alert instead
                     let alert = NSAlert()
@@ -54,7 +54,7 @@ struct MenuBarContentView: View {
                     alert.alertStyle = .warning
                     alert.addButton(withTitle: "Reset")
                     alert.addButton(withTitle: "Cancel")
-                    
+
                     if alert.runModal() == .alertFirstButtonReturn {
                         appState.pomodoroTimer.reset()
                     }
@@ -64,9 +64,9 @@ struct MenuBarContentView: View {
                 .buttonStyle(.bordered)
             }
             .padding(.bottom, 4)
-            
+
             Divider()
-            
+
             // Display Options
             Group {
                 Toggle("Show Minutes", isOn: $appState.showMinutes)
@@ -74,15 +74,15 @@ struct MenuBarContentView: View {
                 Toggle("Use Pie Chart", isOn: $appState.usePieChart)
                 Toggle("Start at Login", isOn: $appState.startAtLogin)
             }
-            
+
             Divider()
-            
+
             // Timer Settings
             Group {
                 Text("Timer Duration")
                     .font(.headline)
                     .padding(.top, 4)
-                
+
                 HStack {
                     Stepper(value: $appState.customTimerMinutes, in: 1...60) {
                         HStack {
@@ -92,7 +92,7 @@ struct MenuBarContentView: View {
                         }
                     }
                 }
-                
+
                 HStack {
                     Stepper(value: $appState.customTimerSeconds, in: 0...59) {
                         HStack {
@@ -103,21 +103,21 @@ struct MenuBarContentView: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             // Color Settings
             Group {
                 Text("Color Settings")
                     .font(.headline)
                     .padding(.top, 4)
-                    
+
                 ColorPicker("Empty Color", selection: $appState.emptyColor)
                 ColorPicker("Full Color", selection: $appState.fullColor)
             }
-            
+
             Divider()
-            
+
             HStack {
                 Spacer()
                 Button("Quit") {
@@ -127,7 +127,7 @@ struct MenuBarContentView: View {
                     alert.alertStyle = .warning
                     alert.addButton(withTitle: "Quit")
                     alert.addButton(withTitle: "Cancel")
-                    
+
                     if alert.runModal() == .alertFirstButtonReturn {
                         NSApplication.shared.terminate(nil)
                     }

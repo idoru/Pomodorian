@@ -45,7 +45,7 @@ swiftc -o "${MACOS_DIR}/${APP_NAME}" \
 if [ $? -eq 0 ]; then
     # Make the binary executable
     chmod +x "${MACOS_DIR}/${APP_NAME}"
-    
+
     # Recreate Info.plist (it got deleted during the build)
     echo "Creating Info.plist..."
     cat > "${CONTENTS_DIR}/Info.plist" << EOL
@@ -76,12 +76,12 @@ if [ $? -eq 0 ]; then
 </dict>
 </plist>
 EOL
-    
+
     # Create app icon from PomodorianIcon.png
     echo "Creating app icon..."
     ICONSET_DIR="${OUTPUT_DIR}/AppIcon.iconset"
     mkdir -p "${ICONSET_DIR}"
-    
+
     # Use PomodorianIcon.png as the source for app icon
     if [ -f "PomodorianIcon.png" ]; then
         # Create iconset images
@@ -101,7 +101,7 @@ EOL
         # Fall back to tomato.svg
         TMP_PNG="${OUTPUT_DIR}/tomato.png"
         sips -s format png tomato.svg --out "${TMP_PNG}"
-        
+
         # Create iconset images
         sips -z 16 16 "${TMP_PNG}" --out "${ICONSET_DIR}/icon_16x16.png"
         sips -z 32 32 "${TMP_PNG}" --out "${ICONSET_DIR}/icon_16x16@2x.png"
@@ -114,18 +114,18 @@ EOL
         sips -z 512 512 "${TMP_PNG}" --out "${ICONSET_DIR}/icon_512x512.png"
         sips -z 1024 1024 "${TMP_PNG}" --out "${ICONSET_DIR}/icon_512x512@2x.png"
     fi
-    
+
     # Convert iconset to icns
     echo "Converting iconset to icns file..."
     iconutil -c icns "${ICONSET_DIR}" -o "${RESOURCES_DIR}/AppIcon.icns"
-    
+
     # Clean up
     echo "Cleaning up temporary files..."
     if [ -f "${OUTPUT_DIR}/tomato.png" ]; then
         rm -f "${OUTPUT_DIR}/tomato.png"
     fi
     rm -rf "${ICONSET_DIR}"
-    
+
     echo "Build completed successfully!"
     echo "App bundle created at: $(pwd)/${OUTPUT_DIR}/${BUNDLE_NAME}"
     echo ""
