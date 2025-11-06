@@ -37,12 +37,12 @@ class PomodoroTimer: ObservableObject {
             startTime = Date().addingTimeInterval(-elapsedTime)
         }
 
-        // Create a repeating timer that updates every 0.1 seconds
+        // Create a repeating timer that updates every 0.5 seconds for better performance
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.updateTimer()
         }
-        timer?.tolerance = 0.02
+        timer?.tolerance = 0.1
         RunLoop.main.add(timer!, forMode: .common)
 
         // Initial update
