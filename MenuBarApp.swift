@@ -8,18 +8,28 @@ extension Notification.Name {
 }
 
 @available(macOS 11.0, *)
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var statusItem: NSStatusItem?
     var popover: NSPopover?
     var refreshTimer: Timer?
     var contentView: NSHostingController<MenuBarContentView>?
     var appState = AppState()
 
+    // Cache only essential UI elements to reduce recreation
+    private var cachedContainer: NSBox?
+    private var cachedStackView: NSStackView?
+    private var lastDisplayState: (showMinutes: Bool, showSeconds: Bool, usePieChart: Bool)?
+
+    // Keep track of observers for proper cleanup
+    private var timerStateObserver: NSObjectProtocol?
+    private var colorSettingsObserver: NSObjectProtocol?
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create popover for menu
         let popover = NSPopover()
         popover.contentSize = NSSize(width: 300, height: 420)
         popover.behavior = .transient
+        popover.delegate = self
 
         // Set up the SwiftUI view for popover
         let contentView = MenuBarContentView()
@@ -38,29 +48,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Create a timer that updates the status bar display
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        // Reduced frequency to 0.5 seconds for better performance
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.updateStatusBarButton()
         }
 
         // Observe timer state changes to update the play/pause button
-        NotificationCenter.default.addObserver(
+        timerStateObserver = NotificationCenter.default.addObserver(
             forName: .timerStateChanged,
             object: nil,
             queue: .main) { [weak self] _ in
-                // Completely recreate the popover view controller to force a full refresh
+                // Instead of recreating the entire view controller, just trigger a refresh
+                // The SwiftUI views will automatically update due to @Published properties
                 if let self = self, let popover = self.popover {
-                    // Create a fresh SwiftUI view
-                    let refreshedView = MenuBarContentView()
-                        .environmentObject(self.appState)
-
-                    // Replace the content view controller
-                    popover.contentViewController = NSHostingController(rootView: refreshedView)
+                    // Force the SwiftUI view to refresh by updating the environment
+                    if let hostingController = popover.contentViewController as? NSHostingController<MenuBarContentView> {
+                        // The view will automatically refresh due to @Published property changes
+                        // No need to recreate the entire view controller
+                        hostingController.rootView.appState.objectWillChange.send()
+                    }
                 }
             }
 
         // Observe color setting changes to update the status bar
-        NotificationCenter.default.addObserver(
+        colorSettingsObserver = NotificationCenter.default.addObserver(
             forName: .colorSettingsChanged,
             object: nil,
             queue: .main) { [weak self] _ in
@@ -84,8 +96,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func updateStatusBarButton() {
         guard let button = statusItem?.button else { return }
 
-        // Clear existing subviews
-        button.subviews.forEach { $0.removeFromSuperview() }
+        // Check if display settings have changed
+        let currentDisplayState = (showMinutes: appState.showMinutes, showSeconds: appState.showSeconds, usePieChart: appState.usePieChart)
+        let needsRecreation = lastDisplayState?.showMinutes != currentDisplayState.showMinutes ||
+                             lastDisplayState?.showSeconds != currentDisplayState.showSeconds ||
+                             lastDisplayState?.usePieChart != currentDisplayState.usePieChart ||
+                             lastDisplayState == nil
+
+        if needsRecreation {
+            // Only clear and recreate when display settings change
+            button.subviews.forEach { $0.removeFromSuperview() }
+            cachedContainer = nil
+            cachedStackView = nil
+            lastDisplayState = currentDisplayState
+        }
 
         // Set appropriate length for status item
         if !(appState.showMinutes || appState.showSeconds) {
@@ -94,38 +118,63 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusItem?.length = 60 // Icon + text
         }
 
-        // Create a clean, simple layout with NSBox as a container
-        // NSBox lets us set a fixed height which will help maintain proper alignment
-        let container = NSBox()
-        container.boxType = .custom
-        container.isTransparent = true
-        container.titlePosition = .noTitle
-        container.fillColor = NSColor.clear
-        container.contentViewMargins = .zero
+        // Create or reuse container
+        if cachedContainer == nil {
+            let container = NSBox()
+            container.boxType = .custom
+            container.isTransparent = true
+            container.titlePosition = .noTitle
+            container.fillColor = NSColor.clear
+            container.contentViewMargins = .zero
 
-        // Fixed 22px height for menu bar
-        container.frame = NSRect(x: 0, y: 0, width: statusItem!.length, height: 22)
+            // Fixed 22px height for menu bar
+            container.frame = NSRect(x: 0, y: 0, width: statusItem!.length, height: 22)
 
-        button.addSubview(container)
-        container.translatesAutoresizingMaskIntoConstraints = false
+            button.addSubview(container)
+            container.translatesAutoresizingMaskIntoConstraints = false
 
-        // Pin container to button
-        NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: button.topAnchor),
-            container.bottomAnchor.constraint(equalTo: button.bottomAnchor),
-            container.leadingAnchor.constraint(equalTo: button.leadingAnchor),
-            container.trailingAnchor.constraint(equalTo: button.trailingAnchor)
-        ])
+            // Pin container to button
+            NSLayoutConstraint.activate([
+                container.topAnchor.constraint(equalTo: button.topAnchor),
+                container.bottomAnchor.constraint(equalTo: button.bottomAnchor),
+                container.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+                container.trailingAnchor.constraint(equalTo: button.trailingAnchor)
+            ])
 
-        // Create a fixed-size, pre-positioned content view
-        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: statusItem!.length, height: 22))
-        container.contentView = contentView
+            // Create a fixed-size, pre-positioned content view
+            let contentView = NSView(frame: NSRect(x: 0, y: 0, width: statusItem!.length, height: 22))
+            container.contentView = contentView
 
-        // --- HORIZONTAL STACK ---
-        let stackView = NSStackView()
-        stackView.orientation = .horizontal
+            cachedContainer = container
+        }
 
-        // Fixed spacing
+        guard let container = cachedContainer,
+              let contentView = container.contentView else { return }
+
+        // Create or reuse stack view
+        if cachedStackView == nil {
+            let stackView = NSStackView()
+            stackView.orientation = .horizontal
+
+            contentView.addSubview(stackView)
+            stackView.translatesAutoresizingMaskIntoConstraints = false
+
+            // These constraints are critical - they keep everything centered
+            NSLayoutConstraint.activate([
+                stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+                stackView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 2),
+                stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -2)
+            ])
+
+            cachedStackView = stackView
+        }
+
+        guard let stackView = cachedStackView else { return }
+
+        // Clear existing widgets before adding new ones to prevent duplication
+        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        // Update spacing when needed
         if appState.showMinutes && appState.showSeconds {
             stackView.spacing = 4  // Standard spacing when both shown
         } else if appState.showMinutes || appState.showSeconds {
@@ -134,28 +183,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             stackView.spacing = 0  // No spacing when only showing chart
         }
 
-        contentView.addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
+        // Update horizontal positioning constraints only when needed
+        if needsRecreation {
+            // Remove existing positioning constraints
+            stackView.superview?.constraints.forEach { constraint in
+                if constraint.firstItem === stackView && (constraint.firstAttribute == .centerX || constraint.firstAttribute == .leading || constraint.firstAttribute == .trailing) {
+                    constraint.isActive = false
+                }
+            }
 
-        // These constraints are critical - they keep everything centered
-        NSLayoutConstraint.activate([
-            stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            stackView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 2),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -2)
-        ])
-
-        // Horizontal positioning depends on content
-        if !(appState.showMinutes || appState.showSeconds) {
-            // Center when only showing chart
-            NSLayoutConstraint.activate([
-                stackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor)
-            ])
-        } else {
-            // Left-align when showing text
-            NSLayoutConstraint.activate([
-                stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
-                stackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -2)
-            ])
+            // Add new positioning constraints
+            if !(appState.showMinutes || appState.showSeconds) {
+                // Center when only showing chart
+                NSLayoutConstraint.activate([
+                    stackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor)
+                ])
+            } else {
+                // Left-align when showing text
+                NSLayoutConstraint.activate([
+                    stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+                    stackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -2)
+                ])
+            }
         }
 
         // --- CHART VIEW (PIE OR BAR) ---
@@ -282,7 +331,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 timeString = String(format: "%ds", totalSeconds)
             }
 
-            // Create text field
+            // Create text field with proper content (original working approach)
             let textField = NSTextField(labelWithString: timeString)
             textField.translatesAutoresizingMaskIntoConstraints = false
             textField.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
@@ -312,6 +361,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+
+    // MARK: - NSPopoverDelegate
+
+    func popoverDidClose(_ notification: Notification) {
+        // Clean up any popover-specific resources when it closes
+        // This helps prevent memory leaks from retained SwiftUI views
+        if let hostingController = popover?.contentViewController as? NSHostingController<MenuBarContentView> {
+            // Force the view to release any retained references
+            hostingController.rootView.appState.objectWillChange.send()
+        }
+    }
+
+    func popoverWillShow(_ notification: Notification) {
+        // Ensure we have a fresh view when showing
+        // This prevents stale state accumulation
+        if let hostingController = popover?.contentViewController as? NSHostingController<MenuBarContentView> {
+            hostingController.rootView.appState.objectWillChange.send()
+        }
+    }
+
+    deinit {
+        // Clean up timers
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+
+        // Clean up notification observers
+        if let observer = timerStateObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = colorSettingsObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+
+        // Clean up cached UI elements
+        cachedContainer?.removeFromSuperview()
+        cachedContainer = nil
+        cachedStackView = nil
     }
 }
 

@@ -3,37 +3,29 @@ import AppKit
 
 @available(macOS 11.0, *)
 struct TimerControlButton: View {
-    // Keep a direct reference to the timer
-    @ObservedObject var timer: PomodoroTimer
-
-    // Local state to track observed changes and force refresh
-    @State private var forceRefresh = false
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         Button {
             // Toggle the timer state
-            if timer.isRunning {
-                timer.pause()
+            if appState.pomodoroTimer.isRunning {
+                appState.pomodoroTimer.pause()
             } else {
-                timer.start()
+                appState.pomodoroTimer.start()
             }
-
-            // Also toggle our local state to force a refresh
-            forceRefresh.toggle()
         } label: {
-            // Use the CURRENT state of the timer, not binding
-            Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
+            // Use the CURRENT state of the timer through environment
+            Image(systemName: appState.pomodoroTimer.isRunning ? "pause.fill" : "play.fill")
                 .foregroundColor(.white)
         }
         .buttonStyle(.bordered)
-        // Force view to redraw when our refresh state changes
-        .id("playButton-\(timer.isRunning)-\(forceRefresh)")
     }
 }
 
 @available(macOS 11.0, *)
 struct MenuBarContentView: View {
     @EnvironmentObject var appState: AppState
+    @State private var timerStateObserver: NSObjectProtocol?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -43,8 +35,8 @@ struct MenuBarContentView: View {
 
                 Spacer()
 
-                // Play/Pause button with custom refreshing state
-                TimerControlButton(timer: appState.pomodoroTimer)
+                // Play/Pause button
+                TimerControlButton()
 
                 Button {
                     // Show a native macOS alert instead
@@ -138,9 +130,23 @@ struct MenuBarContentView: View {
         }
         .padding()
         .frame(width: 300)
-        // Add refresh listener to ensure we get timer state changes
-        .onReceive(NotificationCenter.default.publisher(for: .timerStateChanged)) { _ in
-            // This will be called when the timer state changes
+        .onAppear {
+            // Set up observer when view appears
+            timerStateObserver = NotificationCenter.default.addObserver(
+                forName: .timerStateChanged,
+                object: nil,
+                queue: .main
+            ) { _ in
+                // This will be called when the timer state changes
+                // The @Published properties will automatically trigger UI updates
+            }
+        }
+        .onDisappear {
+            // Clean up observer when view disappears
+            if let observer = timerStateObserver {
+                NotificationCenter.default.removeObserver(observer)
+                timerStateObserver = nil
+            }
         }
     }
 }
