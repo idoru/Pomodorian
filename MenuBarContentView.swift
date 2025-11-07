@@ -3,19 +3,19 @@ import AppKit
 
 @available(macOS 11.0, *)
 struct TimerControlButton: View {
-    @EnvironmentObject var appState: AppState
+    @ObservedObject var timer: PomodoroTimer
 
     var body: some View {
         Button {
             // Toggle the timer state
-            if appState.pomodoroTimer.isRunning {
-                appState.pomodoroTimer.pause()
+            if timer.isRunning {
+                timer.pause()
             } else {
-                appState.pomodoroTimer.start()
+                timer.start()
             }
         } label: {
             // Use the CURRENT state of the timer through environment
-            Image(systemName: appState.pomodoroTimer.isRunning ? "pause.fill" : "play.fill")
+            Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
                 .foregroundColor(.white)
         }
         .buttonStyle(.bordered)
@@ -35,8 +35,8 @@ struct MenuBarContentView: View {
 
                 Spacer()
 
-                // Play/Pause button
-                TimerControlButton()
+                // Play/Pause button observes the timer directly for immediate UI updates
+                TimerControlButton(timer: appState.pomodoroTimer)
 
                 Button {
                     // Show a native macOS alert instead
