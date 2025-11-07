@@ -1,26 +1,42 @@
+<p align="center">
+  <img src="PomodorianIcon.png" alt="Pomodorian app icon" width="170">
+</p>
+
 # Pomodorian
 
-A minimal, vibe-coded MacOS native Pomodoro timer in your statusbar.
+A minimal, vibe-coded macOS menu bar Pomodoro timer that was designed, scripted, and iterated without ever launching full-fat Xcode.
 
-- 400kb binary when built
-- App file is bigger, but that's just because the icon file is bigger than the app - LOL.
-- I already had Xcode configured to build MacOS apps, but I was still amazed that I never opened Xcode during development.
+<p align="center">
+  <img src="Screenshot.png" alt="Pomodorian menu bar screenshot" width="420">
+</p>
 
-## About
+## Highlights
+- ~400 KB release binary; the bundle is bigger only because this icon is fancy.
+- Lives entirely in the status bar—no stray windows, just a timer and a vibe.
+- Built as a Claude Sonnet 3.7 playground for native Mac development experiments.
+- Includes repeatable scripts for rebuilding, validating the icon asset, and tidying whitespace.
 
-I was looking to try out a vibe coding experience with Claude Sonnet 3.7 when it was first released, especially since I'd gotten access to Claude Code as well. Having already had a lot of productivity gains building [Traffi](https://traffi.skcfi.dev) with 3.5, I was excited. I thought to try writing a simple, native MacOS app. Pomodorian is the result.
+## Story & Workflow
+I wanted to see how far I could go pairing Claude Sonnet 3.7 with a fully native SwiftUI app while staying inside lightweight tooling. Pomodorian is the proof-of-concept. I meant to archive the whole prompt log, but it was lost, so the repo now acts as the working notes for that experiment.
 
-I had planned to document the prompts and conversation in this repo as well, but I tragically lost them. I do however,
-have some excellent examples of how I used screenshots to iron out UI bugs and make modifications with a little documentation about that. These are in the `VibingScreenshots` folder.
+Design tweaks and bug fixes were driven by annotated screenshots—check the `VibingScreenshots/` folder for before/after shots and commentary that documents how visual issues were spotted and resolved.
 
-I also had two quick scripts which I would have Claude execute, one to kill, build and start the app so I could inspect the changes (`try_accept.sh`), and the other (`test_icon.sh`), to check that icons were properly installed. The latter one I had Claude write, because it seemed to have trouble installing the icon I had made properly. Asking for a verifiable tests is great, because you can often just ask Claude to keep trying until it fixes it, with a strong caution to always examine its history to ensure it's not trying things it already has.
+## Helper Scripts
+- `scripts/try_accept.sh` – kills any running instance, rebuilds, and launches the menu bar app so you can quickly inspect changes.
+- `scripts/test_icon.sh` – verifies the `PomodorianIcon.png` asset is properly embedded; super handy when Finder insists on showing the default icon.
+- `scripts/fix_whitespace.sh` – normalizes whitespace so diffs stay small and reviewable.
 
-I've also added a white space cleaning script, which I probably should have done from the start to make comparing diffs a little less horrible. But hey, learn from my lesson.
-
-## Installation
-
-IDK it's a Mac app. Install Xcode, ensure you're set up for running MacOS apps on your current OS, and then run:
-```
-./build.sh
-open build/Pomodorian.app   # Or move it to /Applications/ if you like.
-```
+## Installation & Run
+1. Install Xcode command-line tools (or full Xcode) so the macOS SDK is available.
+2. Build the app:
+   ```
+   ./build.sh
+   ```
+3. Launch it straight from the build output or move it into `/Applications`:
+   ```
+   open build/Pomodorian.app
+   ```
+4. Prefer cycling via the helper script while iterating?
+   ```
+   ./scripts/try_accept.sh
+   ```
